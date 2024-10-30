@@ -1,29 +1,24 @@
 from datetime import datetime
 
-from sqlalchemy.orm import Session
-
-from task_2.database.database import get_session
+from task_2.database.database import AsyncSession
 from task_2.database.models import SpimexTradingResults
 from task_2.parser.data_classes import Product
 
 
-def save_to_database(data: list[Product]) -> None:
-    with get_session() as session:
+async def save_to_database(data: list[Product]) -> None:
+    async with AsyncSession() as session:
         for item in data:
-            add_new_product(item, session)
-            session.commit()
-
-def add_new_product(item: Product, session: Session) -> None:
-    new_product = SpimexTradingResults(
-        exchange_product_id=item.product_id,
-        exchange_product_name=item.name,
-        oil_id=item.product_id[:4],
-        delivery_basis_id=item.product_id[4:7],
-        delivery_basis_name=item.basis_name,
-        delivery_type_id=item.product_id[-1],
-        volume=item.volume,
-        total=item.total,
-        count=item.count,
-        date=datetime.strptime(item.date, "%d.%m.%Y")
-    )
-    session.add(new_product)
+            new_product = SpimexTradingResults(
+                exchange_product_id=item.exchange_product_id,
+                exchange_product_name=item.exchange_product_name,
+                oil_id=item.oil_id,
+                delivery_basis_id=item.delivery_basis_id,
+                delivery_basis_name=item.delivery_basis_name,
+                delivery_type_id=item.delivery_type_id,
+                volume=item.volume,
+                total=item.total,
+                count=item.count,
+                date=item.date
+            )
+            session.add(new_product)
+        await session.commit()

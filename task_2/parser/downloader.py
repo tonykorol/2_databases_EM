@@ -1,33 +1,45 @@
+import asyncio
 import os
-import shutil
-import time
-from datetime import datetime, UTC
+from datetime import datetime
 
-import requests
+import aiohttp
 
-from task_2.parser.site_parser import SiteParser
 
 
 class Downloader:
-    def __init__(self):
-        parser = SiteParser()
-        self.urls = parser.start()
-        os.mkdir("downloaded_files")
+    def __init__(self, urls):
+        self.urls = urls
+        if "downloaded_files" not in os.listdir():
+            os.mkdir("downloaded_files")
 
-    def download(self):
-        for url in self.urls:
-            response = requests.get(f"https://spimex.com{url}")
-            if response.status_code == 200:
-                self.save_file(response)
+    async def download(self):
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for url in self.urls:
+                task = asyncio.create_task(self.fetch(session, url))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
 
-    def save_file(self, response):
-        with open(f"downloaded_files/{self.filename_creator()}", "wb") as file:
-            file.write(response.content)
+    async def fetch(self, session: aiohttp.ClientSession, url: str):
+        async with session.get(f"https://spimex.com{url}") as response:
+            if response.status == 200:
+                content = await response.read()
+                await self.save_file(await self.filename_creator(), content)
 
     @staticmethod
-    def filename_creator():
-        return f"file_{datetime.date(datetime.now())}_{datetime.time(datetime.now())}.xls"
+    async def save_file(filename: str, content):
+        with open(f"downloaded_files/{filename}", "wb") as file:
+            file.write(content)
 
     @staticmethod
-    def delete_downloaded_files():
-        shutil.rmtree("downloaded_files")
+    async def filename_creator():
+        now = datetime.now()
+        return f"file_{now.date()}_{now.time()}.xls"
+
+    @staticmethod
+    async def delete_downloaded_files():
+        for filename in os.listdir("downloaded_files"):
+            try:
+                os.remove(f"downloaded_files/{filename}")
+            except Exception as e:
+                print(f"Ошибка удаления файла {filename}\n{e}")
