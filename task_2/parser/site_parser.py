@@ -1,36 +1,52 @@
 from datetime import datetime
 
-import requests
+import aiohttp
 from bs4 import BeautifulSoup
 
 
 class SiteParser:
-    URL = "https://spimex.com/markets/oil_products/trades/results/?page=page-{0}&bxajaxid=d609bce6ada86eff0b6f7e49e6bae904"
-
+    PAGE_URL = "https://spimex.com/markets/oil_products/trades/results/?page=page-{0}&bxajaxid=d609bce6ada86eff0b6f7e49e6bae904"
 
     async def start(self) -> list:
         file_links = await self.get_file_links()
         return file_links
 
-    async def get_page(self, n: int = 1) -> str:
-        response = requests.get(self.URL.format(n))
-        if response.status_code == 200:
-            return response.text
+    async def fetch_page(self, session: aiohttp.ClientSession, n: int = 1) -> str:
+        url = self.PAGE_URL.format(n)
+        async with session.get(url) as response:
+            if response.status == 200:
+                return await response.text()
+            else:
+                raise ValueError(f"Request failed with status code {response.status}")
+
+    @staticmethod
+    async def parse_blocks(page_html: str) -> list:
+        soup = BeautifulSoup(page_html, 'html.parser')
+        blocks = soup.find_all(class_="accordeon-inner__item")
+        file_links = []
+        for block in blocks:
+            file_date_str = block.select_one("div.accordeon-inner__item-inner > div > p > span")
+            if file_date_str:
+                file_date_str = file_date_str.text
+            else:
+                continue
+            file_date = datetime.strptime(file_date_str, "%d.%m.%Y")
+            if file_date > datetime(2022, 12, 31):
+                file_link = block.select_one("div.accordeon-inner__header > a")["href"]
+                file_links.append(file_link)
+            else:
+                break
+        return file_links
 
     async def get_file_links(self) -> list:
-        file_links = []
-        page_number = 1
-        work = True
-        while work:
-            page_html = await self.get_page(page_number)
-            page_number += 1
-            soup = BeautifulSoup(page_html, 'html.parser')
-            blocks = soup.find_all(class_="accordeon-inner__item")
-            for block in blocks:
-                file_date = block.select("div.accordeon-inner__item-inner > div > p > span")[0].text
-                if datetime.strptime(file_date, "%d.%m.%Y") > datetime(2022, 12, 31):
-                    file_link = block.select("div.accordeon-inner__header > a")[0]['href']
-                    file_links.append(file_link)
-                else:
-                    work = False
-        return file_links
+        async with aiohttp.ClientSession() as session:
+            file_links = []
+            page_number = 1
+            while True:
+                page_html = await self.fetch_page(session, page_number)
+                new_links = await self.parse_blocks(page_html)
+                if not new_links:
+                    break
+                file_links.extend(new_links)
+                page_number += 1
+            return file_links

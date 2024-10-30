@@ -9,17 +9,17 @@ from task_2.parser.data_classes import Product
 directory_path = "downloaded_files"
 products = []
 
-async def get_filename() -> str:
+def get_filename() -> str:
     for filename in os.listdir(directory_path):
         yield filename
 
-async def parse_files() -> None:
-    async for filename in get_filename():
-        workbook = xlrd.open_workbook(f"{directory_path}/{filename}")
+def parse_files() -> None:
+    for filename in get_filename():
+        workbook = xlrd.open_workbook(os.path.join(directory_path, filename))
         sheet = workbook.sheet_by_index(0)
-        await create_product(sheet)
+        create_product(sheet)
 
-async def create_product(sheet: Sheet):
+def create_product(sheet: Sheet) -> None:
     write_flag = False
     product_date = ''
     for row_num in range(sheet.nrows):
@@ -63,6 +63,6 @@ async def create_product(sheet: Sheet):
                 continue
 
 
-async def get_products() -> list[Product]:
-    await parse_files()
+def get_products() -> list[Product]:
+    parse_files()
     return products

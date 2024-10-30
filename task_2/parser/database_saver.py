@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from task_2.database.database import AsyncSession
 from task_2.database.models import SpimexTradingResults
 from task_2.parser.data_classes import Product
