@@ -20,7 +20,7 @@ class SiteParser:
                 raise ValueError(f"Request failed with status code {response.status}")
 
     @staticmethod
-    async def parse_blocks(page_html: str) -> list:
+    def parse_blocks(page_html: str) -> list:
         soup = BeautifulSoup(page_html, 'html.parser')
         blocks = soup.find_all(class_="accordeon-inner__item")
         file_links = []
@@ -44,7 +44,7 @@ class SiteParser:
             page_number = 1
             while True:
                 page_html = await self.fetch_page(session, page_number)
-                new_links = await self.parse_blocks(page_html)
+                new_links = self.parse_blocks(page_html)
                 if not new_links:
                     break
                 file_links.extend(new_links)
