@@ -9,32 +9,32 @@ from task_2.parser.site_parser import SiteParser
 
 async def main():
     downloader = None
-# try:
-    start_time = time.time()
-    print(f"Start at {start_time}")
+    try:
+        start_time = time.time()
+        print(f"Start at {start_time}")
 
-    parser = SiteParser()
-    print(f"Run parser")
-    urls = await parser.start()
+        parser = SiteParser()
+        print(f"Run parser")
+        urls = await parser.start()
 
-    downloader = Downloader(urls)
-    print(f"Run downloader")
-    await downloader.download()
-    print(f"download time {time.time() - start_time}")
+        downloader = Downloader(urls)
+        print(f"Run downloader")
+        await downloader.download()
+        print(f"download time {time.time() - start_time}")
 
-    products = get_products()
-    print(f"Run save to database")
-    await save_to_database(products)
+        products = get_products()
+        print(f"Run save to database")
+        await save_to_database(products)
 
 
-# except Exception as e:
-#     print(e)
-# finally:
-    if downloader is not None:  # Проверяем, чтобы избежать ошибки при отсутствии downloader
-        print(f"Delete files")
-        await downloader.delete_downloaded_files()
-    end_time = time.time()
-    print(end_time - start_time)
+    except Exception as e:
+        print(e)
+    finally:
+        if downloader is not None:  # Проверяем, чтобы избежать ошибки при отсутствии downloader
+            print(f"Delete files")
+            await downloader.delete_downloaded_files()
+        end_time = time.time()
+        print(end_time - start_time)
 
 
 
